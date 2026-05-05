@@ -24,17 +24,17 @@ Agent Harness turns these failure modes into roles, files, and protocols.
 
 ## Core Roles
 
-The system has three role agents:
+The system has three isolated role passes inside one agent:
 
 - **Planner**: expands a user request into a high-level product/task spec.
 - **Generator**: creates the actual code, document, design, or other output.
 - **Evaluator**: acts as an independent judge and verifies whether the result meets the bar.
 
-There is also one host role that is not counted as one of the three:
+There is also one host role that is not counted as one of the three role passes:
 
 - **Coordinator**: orchestrates the workflow, passes files, applies system and repository constraints, arbitrates disputes, and decides whether to iterate or finish.
 
-The point is not to make several agents all write answers. If every agent is generating, you only have multiple writers. Agent Harness creates checks and balances: planning, generation, and evaluation stay separate.
+The point is not to make several agents all write answers. If every role is generating, you only have multiple writers. Agent Harness creates checks and balances: planning, generation, and evaluation stay separate.
 
 ## Design Principles
 
@@ -191,7 +191,7 @@ cp -R skills/agent-harness ~/.codex/skills/agent-harness
 
 Other runtimes:
 
-Treat `SKILL.md` as the canonical method document and map Planner, Generator, Evaluator, Coordinator, and artifact files to your runtime's tools. If your runtime cannot spawn true subagents, simulate isolated sequential role passes and clearly label that as degraded mode.
+Treat `SKILL.md` as the canonical method document and map Planner, Generator, Evaluator, Coordinator, and artifact files to your runtime's tools. The default mode is one agent running isolated sequential role passes.
 
 ## Relationship to the Reference Ideas
 
@@ -200,10 +200,9 @@ This repository intentionally absorbs several important harness engineering idea
 It also makes its own abstractions:
 
 - It is packaged as a platform-neutral skill rather than a runtime-specific harness.
-- It explicitly separates the three role agents from the Coordinator.
+- It explicitly separates Planner, Generator, and Evaluator role passes from the Coordinator.
 - It names reusable handoff artifacts.
 - It supports both full cycle mode and final review mode.
 - It provides bilingual documentation for wider sharing.
 
 This is not a copied prompt. It is a portable AI work protocol.
-

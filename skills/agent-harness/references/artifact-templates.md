@@ -10,6 +10,15 @@ These are minimal starter examples. Replace bracketed placeholders with task-spe
 ## Summary
 [One-paragraph safe summary of the user's newest request.]
 
+## Intent Expansion
+[What outcome the harness believes the user is delegating, beyond the literal wording.]
+
+## Delivery Mode
+standard | long-job | simplified-final-review | review-only
+
+## Handoff Workspace
+[Absolute path. Use a disposable temp directory for short work; use a durable directory for long-job delivery.]
+
 ## Constraints Digest
 - [System / repository / platform constraint]
 - [User-imposed constraint]
@@ -17,10 +26,23 @@ These are minimal starter examples. Replace bracketed placeholders with task-spe
 ## Assumptions
 - [Assumption to verify or carry forward]
 
+## Autonomy Budget
+- May infer: [low-risk assumptions the harness can make]
+- May inspect: [files, app surfaces, docs, logs, web sources, etc.]
+- May change: [allowed write scope]
+- Must ask before: [scope/risk/permission boundary]
+
+## Question Policy
+[Ask only for blocking ambiguity / ask before external side effects / ask before broad scope expansion.]
+
 ## Role Permissions
 - Planner: [read-only / spec only]
 - Generator: [write scope]
 - Evaluator: [read-only verification unless explicitly assigned fixes]
+
+## Stop Conditions
+- [Pass condition]
+- [Maximum iteration count, time/budget limit, or escalation condition]
 
 ## Validation Expectations
 - [Tests, UI checks, source checks, document QA, etc.]
@@ -42,6 +64,9 @@ These are minimal starter examples. Replace bracketed placeholders with task-spe
 
 ## Scope
 - [In-scope item]
+
+## Milestones / Vertical Slices
+- [Milestone with user-visible or verifiable output]
 
 ## Non-Goals
 - [Explicitly out of scope]
@@ -167,7 +192,7 @@ Simplified Final Review Mode
 # Context Transition
 
 ## Current Goal
-[Goal the fresh role instance should continue.]
+[Goal the fresh role pass should continue.]
 
 ## Completed Work
 - [Completed item]
@@ -196,14 +221,49 @@ Simplified Final Review Mode
 ## Findings
 - [Severity] [Finding title]: [evidence and impact]
 
+## Evidence Sources
+- [Spec / contract / diff / changed file / rendered artifact / screenshot / log / test output reviewed before Generator report]
+
 ## Verification Performed
 - [Command, UI flow, source check, or document QA]
+
+## Generator Report Cross-Check
+- [Claim, file list, validation result, known limitation, or omission checked after initial findings]
 
 ## Pass / Fail
 PASS | FAIL
 
 ## Residual Risks
 - [Accepted risk or deferred polish]
+```
+
+## 45-checkpoint.md
+
+```markdown
+# Long-Job Checkpoint
+
+## Current Milestone / Contract
+[Milestone or active contract being worked.]
+
+## Completed Since Last Checkpoint
+- [Completed work]
+
+## Verification Evidence
+- [Command/check/UI flow/source check]: [result]
+
+## Failed Attempts / Stall Signals
+- [Attempt or signal, if any]
+
+## Current State
+- [Files/artifacts changed]
+- [Important decisions]
+- [Known unresolved issues]
+
+## Next Action
+[Next contract, repair, context transition, final review, or user question.]
+
+## Needs User?
+No | Yes: [smallest necessary question]
 ```
 
 ## 50-final-summary.md
@@ -223,4 +283,3 @@ PASS | FAIL
 ## Recommended Next Step
 [Optional next action that directly follows from this work.]
 ```
-

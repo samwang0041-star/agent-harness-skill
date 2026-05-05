@@ -30,9 +30,9 @@ Core thesis:
 
 ## Core Pattern
 
-Agent Harness is not "ask three agents to all write answers."
+Agent Harness is not "ask several agents to all write answers."
 
-It is a system of role separation:
+It is a single-agent system of role separation:
 
 - Planner expands the user's request into a restrained high-level spec.
 - Generator builds only against an agreed contract.

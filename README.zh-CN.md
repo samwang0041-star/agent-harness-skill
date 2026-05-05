@@ -24,17 +24,17 @@ Agent Harness 把这些失败模式拆成角色、文件和协议。
 
 ## 核心角色
 
-这套系统有三个角色 agent：
+这套系统在一个 agent 内部运行三个隔离角色轮次：
 
 - **Planner / 规划者**：把用户的一句话需求扩展成高层产品/任务规格。
 - **Generator / 生成者**：按照合同真正产出代码、文档、设计或其他结果。
 - **Evaluator / 评估者**：作为独立裁判，严格验证结果是否达标。
 
-还有一个不计入三角色的宿主角色：
+还有一个不计入三角色轮次的宿主角色：
 
 - **Coordinator / 协调者**：组织流程、传递文件、应用系统和仓库约束、仲裁争议、决定继续迭代还是结束。
 
-重点不是“多叫几个 Agent 一起写”。如果所有 Agent 都在生成答案，它们只是多个写手。Agent Harness 真正要建立的是制衡关系：规划、生成、评估彼此隔离。
+重点不是“多叫几个 Agent 一起写”。如果所有角色都在生成答案，它们只是多个写手。Agent Harness 真正要建立的是制衡关系：规划、生成、评估彼此隔离。
 
 ## 设计原则
 
@@ -191,7 +191,7 @@ cp -R skills/agent-harness ~/.codex/skills/agent-harness
 
 其他运行环境：
 
-把 `SKILL.md` 作为核心方法文档，把 Planner、Generator、Evaluator、Coordinator 和文件产物映射到你的工具能力即可。如果不能创建真正的子 agent，也可以用隔离的顺序角色轮次模拟，但应明确这是降级模式。
+把 `SKILL.md` 作为核心方法文档，把 Planner、Generator、Evaluator、Coordinator 和文件产物映射到你的工具能力即可。默认模式是一个 agent 按顺序运行隔离角色轮次。
 
 ## 这个仓库和参考方法的关系
 
@@ -200,10 +200,9 @@ cp -R skills/agent-harness ~/.codex/skills/agent-harness
 同时，它做了自己的抽象：
 
 - 改成平台中立 skill，而不是绑定某个具体运行时。
-- 显式区分三角色 agent 和 Coordinator。
+- 显式区分 Planner、Generator、Evaluator 角色轮次和 Coordinator。
 - 把每个中间产物命名成可复用 artifact。
 - 同时支持完整周期模式和最终统一评审模式。
 - 提供中英双语说明，方便跨团队传播。
 
 这不是一份照搬的提示词，而是一套可迁移的 AI 工作协议。
-

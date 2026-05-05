@@ -1,4 +1,4 @@
-# I Turned AI Collaboration into an Agent Harness: Not Three Agents, But a System of Checks and Balances
+# I Turned AI Collaboration into an Agent Harness: Not More Agents, But a System of Checks and Balances
 
 Why does AI sometimes look busy, confident, and complete, while the result still feels unstable?
 
@@ -10,7 +10,7 @@ So I turned this method into a reusable skill called Agent Harness.
 
 The point is not to summon more agents. The point is to build a structured production system for AI work.
 
-The system has three role agents:
+The system has three role passes inside one agent:
 
 1. Planner
 2. Generator
@@ -18,15 +18,15 @@ The system has three role agents:
 
 And one hidden role: Coordinator.
 
-The Coordinator is not one of the three. It behaves more like a director or project lead: preserve intent, assign roles, enforce boundaries, manage file handoffs, and decide whether to iterate or finish.
+The Coordinator is not one of the three role passes. It behaves more like a director or project lead: preserve intent, assign roles, enforce boundaries, manage file handoffs, and decide whether to iterate or finish.
 
-## Why Not Let Three Agents All Write?
+## Why Not Let Multiple Agents All Write?
 
-When people hear "multi-agent," they often imagine three agents brainstorming or writing in parallel.
+When people hear "agent harness," they may imagine several agents brainstorming or writing in parallel.
 
 That can easily become chaos.
 
-If all three agents are generating answers, they are just three writers. You may end up with three similar, conflicting, or hard-to-merge outputs.
+If every role is generating answers, they are just several writers. You may end up with similar, conflicting, or hard-to-merge outputs.
 
 What I want is not more writing.
 
@@ -154,4 +154,3 @@ A good skill is a habit.
 A good harness is an operating system for collaboration.
 
 Agent Harness helps AI work become checkable, reviewable, and iterative instead of merely confident.
-
