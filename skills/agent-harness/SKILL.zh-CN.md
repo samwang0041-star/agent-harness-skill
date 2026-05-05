@@ -1,6 +1,6 @@
 ---
 name: agent-harness
-description: 当用户明确要求运行 agent-harness、harness engineering、多 agent / 子 agent、三人协作、Planner-Generator-Evaluator、规划器/生成器/评估器，或要求唤醒三个 agent 处理具体需求时使用。本文件是中文阅读版；可安装版本以 SKILL.md 为准。
+description: 当用户明确要求运行 agent-harness、harness engineering、多 agent / 子 agent、三人协作、Planner-Generator-Evaluator、规划器/生成器/评估器，要求唤醒三个 agent 处理具体需求，或明确要求质检/改进 agent-harness skill 自身时使用。本文件是中文阅读版；可安装版本以 SKILL.md 为准。
 ---
 
 # Agent Harness 中文阅读版
@@ -30,7 +30,7 @@ description: 当用户明确要求运行 agent-harness、harness engineering、�
 
 ### Coordinator / 协调者
 
-Coordinator 负责保存用户意图、应用系统/组织/仓库约束、创建私有交接空间、控制角色边界、防止写入冲突、释放已完成 agent/会话资源，并决定是否继续迭代、接受残余风险或询问用户。
+Coordinator 负责保存用户意图、应用系统/组织/仓库约束、创建私有交接空间、控制角色边界、防止写入冲突、释放已完成 agent/会话资源，并决定是否继续迭代、接受残余风险或询问用户。默认交接空间可放在 `${TMPDIR:-/tmp}/agent-harness-<task-slug>-<timestamp>/`；如果不可写，选择另一个可写临时目录。
 
 ### Planner / 规划者
 
@@ -99,6 +99,8 @@ Evaluator 不能接受 Generator 自评作为证据，不能为了礼貌牺牲�
 50-final-summary.md
 ```
 
+具体 artifact 模板见 `references/artifact-templates.md`。Coordinator 起步清单见 `references/bootstrap-checklist.md`。
+
 ## Rubric 默认维度
 
 默认保留四项核心评估维度：
@@ -155,4 +157,3 @@ Evaluator 不能接受 Generator 自评作为证据，不能为了礼貌牺牲�
 ## 平台中立
 
 `SKILL.md` 是可安装的核心版本。平台 metadata、manifest、UI chip、安装目录只是适配层，不定义方法本身。其他运行环境只要能映射角色、文件、工具和顺序/并行执行，就可以使用这套协议。
-

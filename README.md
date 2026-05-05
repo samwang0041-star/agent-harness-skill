@@ -16,6 +16,8 @@ Core thesis:
 
 - `skills/agent-harness/SKILL.md`: canonical portable skill for Claude Code, Codex, and other agent runtimes.
 - `skills/agent-harness/SKILL.zh-CN.md`: Chinese reading version.
+- `skills/agent-harness/references/bootstrap-checklist.md`: coordinator startup checklist.
+- `skills/agent-harness/references/artifact-templates.md`: starter templates for the handoff artifacts.
 - `README.zh-CN.md`: full Chinese explanation.
 - `README.en.md`: full English explanation.
 - `docs/ARTICLE.zh-CN.md`: Chinese public article draft.
@@ -68,4 +70,3 @@ Use `SKILL.md` as the canonical method document and map the role prompts and art
 This repository is strongly informed by harness engineering practice, especially the ideas of restrained planning, strict external evaluation, contract-driven iteration, evaluator calibration, context reset, and component-by-component simplification.
 
 It is not a transcript or a copied implementation. It is a rewritten, platform-neutral protocol meant to be installed, adapted, and audited across assistant runtimes.
-
