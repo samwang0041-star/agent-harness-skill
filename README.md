@@ -2,6 +2,8 @@
 
 Language: [English](README.en.md) | [中文](README.zh-CN.md)
 
+![Agent Harness cover](assets/cover-agent-harness.png)
+
 Agent Harness is a platform-neutral AI collaboration skill. It distills practical harness engineering ideas into an installable protocol built around Planner, Generator, Evaluator, and Coordinator roles.
 
 核心判断：
@@ -22,6 +24,9 @@ Core thesis:
 - `README.en.md`: full English explanation.
 - `docs/ARTICLE.zh-CN.md`: Chinese public article draft.
 - `docs/ARTICLE.en.md`: English public article draft.
+- `assets/cover-agent-harness.png`: cover image for articles and sharing.
+- `MAINTENANCE.md`: long-term maintenance workflow.
+- `scripts/sync-local.sh`: sync the canonical skill into local Claude/Codex skill directories.
 
 ## Core Pattern
 
@@ -64,6 +69,16 @@ cp -R skills/agent-harness ~/.codex/skills/agent-harness
 Other runtimes:
 
 Use `SKILL.md` as the canonical method document and map the role prompts and artifacts to the tools your runtime supports.
+
+## Local Maintenance
+
+This repository is meant to be the canonical long-term project. Update the skill here first, then sync local installs:
+
+```bash
+scripts/sync-local.sh
+```
+
+Private source material and temporary review artifacts should live under `private/`, which is ignored by git.
 
 ## Relationship to Harness Engineering
 
