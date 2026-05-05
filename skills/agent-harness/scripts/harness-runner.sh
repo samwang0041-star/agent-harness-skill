@@ -144,6 +144,7 @@ target_cwd="$(cd "$target_cwd" && pwd)"
 prompt_path="${workspace}/runner-next-prompt.md"
 gate_output_path="${workspace}/runner-gate-output.txt"
 log_path="${workspace}/runner.log"
+last_agent_status=""
 
 timestamp() {
   date '+%Y-%m-%d %H:%M:%S'
@@ -169,6 +170,9 @@ write_prompt() {
     echo "- Target stage: \`${stage}\`"
     echo "- Cycle: ${cycle}"
     echo "- Gate status: ${gate_status}"
+    if [[ -n "$last_agent_status" ]]; then
+      echo "- Latest agent command exit status: ${last_agent_status}"
+    fi
     echo
     if [[ -n "$request_text" ]]; then
       echo "## Original Request"
@@ -234,15 +238,26 @@ while [[ "$cycle" -le "$max_cycles" ]]; do
   export HARNESS_CWD="$target_cwd"
   export HARNESS_GATE_OUTPUT="$gate_output_path"
 
+  set +e
   (
     cd "$target_cwd"
     bash -lc "$agent_cmd"
   ) 2>&1 | tee -a "$log_path"
+  agent_status="${PIPESTATUS[0]}"
+  set -e
+  last_agent_status="$agent_status"
+
+  if [[ "$agent_status" -ne 0 ]]; then
+    log "cycle ${cycle}/${max_cycles}: agent command exited ${agent_status}; rerunning gate before deciding next step"
+  fi
 
   if run_gate; then
     log "gate passed after cycle ${cycle}"
     exit 0
   fi
+
+  write_prompt "$cycle" "FAILED"
+  log "cycle ${cycle}/${max_cycles}: gate still failed; refreshed continuation prompt: $prompt_path"
 
   if [[ "$cycle" -lt "$max_cycles" && "$sleep_seconds" -gt 0 ]]; then
     sleep "$sleep_seconds"
