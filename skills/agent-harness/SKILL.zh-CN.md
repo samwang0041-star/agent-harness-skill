@@ -37,6 +37,22 @@ Coordinator 需要负责把短 prompt 转成可交付目标：
 
 启动不等于无限扩范围。它只授权在用户目标、系统约束、仓库规则和 autonomy budget 内主动承担交付责任。
 
+## 结果归属
+
+Agent Harness 是为了产出有用结果，不是为了产出漂亮流程文档。
+
+当启动任务绑定到真实代码库、App、文档、数据集或工作流问题时，Coordinator 在规划前必须判断最终产物类型：
+
+- **proposal-only / 只交付方案**：用户明确只要方案、架构评审、批判、对比或决策备忘录，或实现会越过权限边界。
+- **first implementation slice / 第一段可实现切片**：用户描述的是一个坏掉、薄弱、缺失或不可用的产品行为，并且当前仓库内存在安全的垂直切片可以实现。
+- **full delivery / 完整交付**：任务边界足够小，可以在当前 autonomy budget 内端到端完成。
+
+代码库修复、功能改进、产品流程、UI、文档、数据和自动化任务，默认选择 **first implementation slice**，除非用户明确说只要方案、只评审，或不要改文件。
+
+设计方案、技术计划、架构图和路线图通常是中间产物，不是最终交付。只要有安全的下一段实现切片，就不能在写完方案后问“要不要实现”。应把下一段切片写进 iteration contract 并继续做。只有下一步会越过真实边界时才问用户：范围大幅扩张、破坏性迁移、外部副作用、成本/风险上升、访问凭证/秘密，或会显著改变结果的产品选择。
+
+如果用户明确只要设计方案，就把方案做好，并说明下一段实现切片是什么，但不要假装产品已经被修好。
+
 ## 不可协商原则
 
 - 生成和评估必须分离。Generator 的自评不能作为最终质量门。
@@ -45,6 +61,7 @@ Coordinator 需要负责把短 prompt 转成可交付目标：
 - 每个构建周期前必须有 iteration contract；简化模式下必须有 final review contract。
 - Evaluator 必须严格，并在任务允许时主动检查、运行、点击、复现、验证。
 - 优先自主推进，而不是频繁提问。只有阻断安全或有效推进的问题才问用户。
+- 把计划当脚手架。除非明确选择 proposal-only，否则 plan、rubric、roadmap 不是用户要的最终结果。
 - 对明确的长作业/高级交付请求，优先完整、验证过的结果，而不是短响应延迟。
 - 把 artifact gate 当成硬流程边界。最终回复用户前，必须确认必需交接文件存在、非空，并且 final gate 通过或已手动检查。
 - 在当前 agent 会话内自监督。当前 Coordinator 负责启动、检查并服从 gate/runner/monitor 协议；不能依赖第二个助手或用户来发现 harness 提前停了。
@@ -54,7 +71,7 @@ Coordinator 需要负责把短 prompt 转成可交付目标：
 
 ### Coordinator / 协调者
 
-Coordinator 负责保存用户意图、应用系统/组织/仓库约束、选择交付模式、设定 autonomy budget、记录提问策略和停止条件、创建私有交接空间并写入 `00-request.md`、控制角色边界、防止写入冲突、释放已完成会话/临时状态资源，并决定是否继续迭代、接受残余风险或询问用户。
+Coordinator 负责保存用户意图、应用系统/组织/仓库约束、选择交付模式、判断 outcome class（只交付方案、第一段可实现切片、完整交付）、设定 autonomy budget、记录提问策略和停止条件、创建私有交接空间并写入 `00-request.md`、控制角色边界、防止写入冲突、释放已完成会话/临时状态资源，并决定是否继续迭代、接受残余风险或询问用户。final gate 通过后，必须给用户真正的最终回复；gate 输出本身不算交付。
 
 短任务、标准交付和只评审模式可以使用临时交接空间，默认路径为 `${TMPDIR:-/tmp}/agent-harness-<task-slug>-<timestamp>/`。长作业必须使用持久交接空间，避免 checkpoint 因 App 重启、上下文压缩、系统清理临时目录或手动暂停而丢失。只有在仓库内私有交接文件可接受且会被忽略时，才优先使用 `<repo>/.agent-harness/<task-slug>/`；否则使用 `${CODEX_HOME:-$HOME/.codex}/harness-runs/<task-slug>-<timestamp>/` 或其他用户拥有的持久目录。
 
@@ -124,6 +141,7 @@ Evaluator 不能接受 Generator 自评作为证据，不能让 Generator 报告
 
 - 扩展需求成规格。
 - 跑一轮聚焦合同。
+- 对代码库或产品修复任务，这一轮默认必须是安全的实现切片，除非明确选择 proposal-only。
 - 验证结果。
 - 只有 blocking issue 存在时才迭代。
 
@@ -136,6 +154,7 @@ Evaluator 不能接受 Generator 自评作为证据，不能让 Generator 报告
 长作业交付必须包含：
 
 - 带 milestone 或 vertical slice 的产品/任务规格。
+- `00-request.md` 中明确 outcome class。代码库/产品修复任务默认是第一段可实现切片，除非明确只要方案。
 - `00-request.md` 中的 autonomy budget 和 question policy。
 - `00-request.md` 中记录的持久交接空间。
 - 构建前明确 stop condition。
@@ -145,6 +164,7 @@ Evaluator 不能接受 Generator 自评作为证据，不能让 Generator 报告
 - 当 Generator 失去连贯性、重复失败或接近运行时上下文极限时，使用 context transition。
 
 milestone 之间默认继续推进；只有阻断性歧义、风险、权限问题或停止条件触发时才询问用户。
+对于可实现任务，不能只交付 roadmap。方案通过当前 contract 后，应继续进入第一段安全 vertical slice，而不是问用户是否要实现。
 
 ## 硬门禁与轻量 Runner
 
@@ -165,6 +185,7 @@ final gate：
 ```
 
 根据实际模式选择 `--mode standard`、`--mode long-job`、`--mode simplified-final-review` 或 `--mode review-only`。
+预检查 artifact 时使用 `--stage checkpoint`。只有在 `50-final-summary.md` 已经写完后，才使用 `--stage final`。
 
 gate 失败不是小瑕疵，而是流程失败。gate 不通过时不能最终回复用户；应补齐缺失 artifact、补做验证、把合同标记为 `BLOCKED`、写入 `45-checkpoint.md`，或询问用户最小必要问题。
 
@@ -176,7 +197,8 @@ gate 失败不是小瑕疵，而是流程失败。gate 不通过时不能最终�
 - 简化最终评审：`00-request.md`、`10-product-spec.md`、`20-evaluation-rubric.md`、`25-final-review-contract.md`、`30-generation-report.md`、`40-evaluation-report.md`、`50-final-summary.md`
 - 只评审最终交付：`00-request.md`、`10-product-spec.md`、`20-evaluation-rubric.md`、`40-evaluation-report.md`、`50-final-summary.md`
 
-`40-evaluation-report.md` 必须有明确的 `PASS` 或 `FAIL`。只有自信叙述、没有 pass/fail 决策，不能通过 gate。
+`40-evaluation-report.md` 必须有明确的 `PASS` 或 `FAIL`。优先使用精确标记 `Decision: PASS` 或 `Decision: FAIL`。只有自信叙述、没有 pass/fail 决策，不能通过 gate。
+当前合同必须包含 `Status: AGREED`、`Status: COORDINATOR-ARBITRATED` 或 `Status: BLOCKED`；不要只靠自然语言描述。
 对于产品交付模式（`standard`、`long-job`、`simplified-final-review`），final gate 必须要求 `PASS`，并且当前合同不能是 `BLOCKED`。`FAIL` 评估或 `BLOCKED` 合同可以作为 checkpoint 证据，但不是合法最终交付状态。
 
 ## 自监督协议
@@ -195,7 +217,7 @@ gate 失败不是小瑕疵，而是流程失败。gate 不通过时不能最终�
 在 Claude Code 或任何能执行 shell 的交互式运行时中，当前 agent 应在 `00-request.md`、`10-product-spec.md`、`20-evaluation-rubric.md` 和当前合同存在后，自己启动 monitor：
 
 ```bash
-"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
+nohup "$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
   --workspace "$HANDOFF_WORKSPACE" \
   --mode long-job \
   --stage final \
@@ -205,7 +227,15 @@ gate 失败不是小瑕疵，而是流程失败。gate 不通过时不能最终�
   --request-file "$HANDOFF_WORKSPACE/00-request.md" \
   > "$HANDOFF_WORKSPACE/monitor-supervisor.log" 2>&1 &
 echo $! > "$HANDOFF_WORKSPACE/monitor.pid"
+sleep 2
+monitor_pid="$(cat "$HANDOFF_WORKSPACE/monitor.pid")"
+if ! kill -0 "$monitor_pid" 2>/dev/null; then
+  echo "monitor did not stay alive; inspect monitor-supervisor.log and use checkpoint gates manually" \
+    | tee -a "$HANDOFF_WORKSPACE/monitor-supervisor.log"
+fi
 ```
+
+启动 monitor 后必须做健康检查。如果 PID 已经不在，或者第一个轮询间隔后 monitor log 仍为空，不要声称 self-monitoring 已经生效。把 monitor 启动失败写进 `05-self-supervision.md`，然后用明确的 checkpoint/final gate 继续推进。有些嵌套 CLI 运行时会在 tool command 结束时杀掉后台任务；在这种环境里，monitor 只能算 best-effort，真正的硬约束仍然是 gate。
 
 monitor 不能替代当前 agent 自己跑检查。当前 agent 仍然必须在每个周期结束后跑 checkpoint gate，并在最终回复用户前跑 final gate。
 
@@ -237,12 +267,14 @@ runner 故意保持 provider-neutral，不绑定 Codex、Claude 或 Kimi。`--ag
 示例：
 
 ```bash
-"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
+nohup "$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
   --workspace "$HANDOFF_WORKSPACE" \
   --mode long-job \
   --stage final \
   --interval 30 \
-  --idle-timeout 600
+  --idle-timeout 600 \
+  > "$HANDOFF_WORKSPACE/monitor-supervisor.log" 2>&1 &
+echo $! > "$HANDOFF_WORKSPACE/monitor.pid"
 ```
 
 ## Stall and Resume Policy / 卡住与恢复策略

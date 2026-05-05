@@ -46,6 +46,22 @@ The Coordinator must assume responsibility for turning the user's prompt into a 
 
 Activation does not authorize unbounded scope creep. It authorizes thoughtful ownership inside the user's goal, active constraints, repository rules, and the chosen autonomy budget.
 
+## Outcome Ownership
+
+Agent Harness is for producing useful outcomes, not beautiful process artifacts.
+
+When the activated task is attached to a real codebase, app, document, dataset, or workflow problem, the Coordinator must classify the intended deliverable before planning:
+
+- **proposal-only**: the user explicitly asks only for a plan, architecture review, critique, comparison, or decision memo, or implementation would require a user permission boundary
+- **first implementation slice**: the user describes a broken, weak, missing, or unusable product behavior and a safe vertical slice can be implemented inside the current repository
+- **full delivery**: the requested output is bounded enough to finish end-to-end in the current autonomy budget
+
+Default to **first implementation slice** for codebase repair, feature improvement, product workflow, UI, document, data, and automation tasks unless the user explicitly says to only design, only review, or not edit files.
+
+A design proposal, technical plan, architecture map, or roadmap is usually an intermediate artifact, not the final deliverable. Do not stop after writing a plan and ask "should I implement this?" when a safe next implementation slice is available. Instead, record the chosen slice in the iteration contract and start it. Ask the user only when the next action crosses a real boundary: broad scope expansion, destructive migration, external side effect, cost/risk escalation, credential/secret access, or an ambiguous product choice that materially changes the outcome.
+
+For explicit design-only requests, deliver the design well and say what implementation slice would come next, but do not pretend the product is fixed.
+
 ## Non-Negotiable Principles
 
 - Separate generation from evaluation. Never let the Generator's self-review be the final quality gate.
@@ -54,6 +70,7 @@ Activation does not authorize unbounded scope creep. It authorizes thoughtful ow
 - Require an iteration contract before each build cycle, or a final review contract in simplified mode. Generator and Evaluator agree on what must be delivered and how it will be tested.
 - Make the Evaluator strict. It must actively inspect, run, click, test, reproduce, or otherwise verify when the task allows it.
 - Prefer autonomous progress over frequent questions. Ask only when ambiguity blocks safe or meaningful progress.
+- Treat planning as scaffolding. Plans, rubrics, and roadmaps are not the user-facing outcome unless proposal-only mode is explicitly chosen.
 - For explicit long-job or high-quality delivery requests, optimize for finished, verified output over short response latency.
 - Treat artifact gates as hard workflow boundaries. Do not send a user-facing final response until the required handoff artifacts exist, are non-empty, and the final gate passes or has been manually checked.
 - Self-supervise inside the active agent session. The active Coordinator is responsible for starting, checking, and obeying the gate/runner/monitor protocol; do not rely on a second assistant or the user to notice that the harness stopped early.
@@ -66,6 +83,7 @@ The Coordinator must:
 - Preserve the user's intent and the newest user instruction.
 - Apply all higher-priority system, organization, repository, safety, and tool constraints.
 - Decide the delivery mode: standard, long-job, simplified final review, or review-only.
+- Decide the outcome class: proposal-only, first implementation slice, or full delivery.
 - Set an autonomy budget: what the harness may infer, inspect, change, verify, and defer without asking.
 - Record a question policy: ask only for blockers; otherwise proceed with explicit assumptions.
 - Record stop conditions: pass criteria, maximum iteration count when useful, time/budget/user limits, or blocker escalation.
@@ -80,6 +98,7 @@ The Coordinator must:
 - Clean up disposable handoff workspaces unless the user wants to inspect the artifacts. Preserve durable long-job workspaces until final delivery no longer needs resume evidence, or until the user asks to delete them.
 - Before any user-facing final response, run the artifact gate when shell execution is available, or manually check the same required artifact list when it is not.
 - In long-job delivery, create a self-supervision record in the handoff workspace before build work starts. Record the gate command, optional monitor command, stop condition, and what to do if the gate fails.
+- After the final gate passes, send a real user-facing final response. Gate output alone is not delivery.
 - Decide when to stop, iterate, ask the user, or accept a known residual risk.
 
 ## Role 1: Planner
@@ -184,6 +203,7 @@ Use for concrete tasks that still benefit from planning and evaluation:
 
 - expand the request into a spec
 - run one focused contract cycle
+- for codebase or product repair tasks, make that cycle a safe implementation slice unless proposal-only mode was explicitly chosen
 - verify the result
 - iterate only when blocking issues remain
 
@@ -196,6 +216,7 @@ When using long-job delivery, load `references/long-job-checklist.md` and use it
 Long-job delivery requires:
 
 - a product/task spec with milestones or vertical slices
+- an explicit outcome class in `00-request.md`, defaulting to first implementation slice for codebase/product repair tasks unless proposal-only is explicit
 - an autonomy budget and question policy in `00-request.md`
 - a durable handoff workspace recorded in `00-request.md`
 - a stop condition before build work starts
@@ -205,6 +226,7 @@ Long-job delivery requires:
 - context transition if the Generator loses coherence, repeats failures, or the runtime is near its practical context limit
 
 Do not wait for the user between milestones unless a blocking ambiguity, risk, permission issue, or stop condition requires it.
+Do not stop at a roadmap for an implementation-capable task. After the plan is accepted by the active contract, continue into the first safe vertical slice without asking the user to approve the obvious next step.
 
 ## Hard Gates and Lightweight Runner
 
@@ -225,6 +247,7 @@ Final gate:
 ```
 
 Use the matching `--mode` for `standard`, `long-job`, `simplified-final-review`, or `review-only`.
+Use `--stage checkpoint` for pre-final artifact checks. Use `--stage final` only after `50-final-summary.md` already exists.
 
 Gate failure is a workflow failure, not polish. If the gate fails, do not final. Instead, write the missing artifact, perform the missing verification, mark the contract `BLOCKED`, write `45-checkpoint.md`, or ask the smallest necessary user question.
 
@@ -236,7 +259,8 @@ If shell execution is unavailable, manually enforce the same gate:
 - simplified final review: `00-request.md`, `10-product-spec.md`, `20-evaluation-rubric.md`, `25-final-review-contract.md`, `30-generation-report.md`, `40-evaluation-report.md`, `50-final-summary.md`
 - review-only final: `00-request.md`, `10-product-spec.md`, `20-evaluation-rubric.md`, `40-evaluation-report.md`, `50-final-summary.md`
 
-The `40-evaluation-report.md` must include an explicit `PASS` or `FAIL`. A confident narrative without a pass/fail decision does not pass the gate.
+The `40-evaluation-report.md` must include an explicit `PASS` or `FAIL`. Prefer the exact marker `Decision: PASS` or `Decision: FAIL`. A confident narrative without a pass/fail decision does not pass the gate.
+The active contract must include `Status: AGREED`, `Status: COORDINATOR-ARBITRATED`, or `Status: BLOCKED`; avoid relying only on prose.
 For product-delivery modes (`standard`, `long-job`, and `simplified-final-review`), the final gate requires `PASS` and the active contract must not be `BLOCKED`. A `FAIL` evaluation or `BLOCKED` contract is valid checkpoint evidence, but it is not a valid final delivery state.
 
 ## Self-Supervision Protocol
@@ -255,7 +279,7 @@ For every long-job run, the active Coordinator must create `05-self-supervision.
 In Claude Code or any shell-capable interactive runtime, the active agent should start its own monitor after `00-request.md`, `10-product-spec.md`, `20-evaluation-rubric.md`, and the active contract exist:
 
 ```bash
-"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
+nohup "$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
   --workspace "$HANDOFF_WORKSPACE" \
   --mode long-job \
   --stage final \
@@ -265,7 +289,15 @@ In Claude Code or any shell-capable interactive runtime, the active agent should
   --request-file "$HANDOFF_WORKSPACE/00-request.md" \
   > "$HANDOFF_WORKSPACE/monitor-supervisor.log" 2>&1 &
 echo $! > "$HANDOFF_WORKSPACE/monitor.pid"
+sleep 2
+monitor_pid="$(cat "$HANDOFF_WORKSPACE/monitor.pid")"
+if ! kill -0 "$monitor_pid" 2>/dev/null; then
+  echo "monitor did not stay alive; inspect monitor-supervisor.log and use checkpoint gates manually" \
+    | tee -a "$HANDOFF_WORKSPACE/monitor-supervisor.log"
+fi
 ```
+
+After starting the monitor, health-check it. If the PID is not alive, or if the monitor logs remain empty after the first polling interval, do not claim that self-monitoring is active. Record the failed monitor start in `05-self-supervision.md` and continue with explicit checkpoint/final gates. Some nested CLI runtimes kill background jobs when a tool command exits; in those runtimes, monitor is best-effort and the hard gates are the source of truth.
 
 The monitor is not a substitute for the active agent's own checks. The active agent still must run the checkpoint gate after each cycle and the final gate before replying to the user.
 
@@ -297,12 +329,14 @@ For Claude Code or any interactive agent session, use `"$HARNESS_SKILL_DIR/scrip
 Example:
 
 ```bash
-"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
+nohup "$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
   --workspace "$HANDOFF_WORKSPACE" \
   --mode long-job \
   --stage final \
   --interval 30 \
-  --idle-timeout 600
+  --idle-timeout 600 \
+  > "$HANDOFF_WORKSPACE/monitor-supervisor.log" 2>&1 &
+echo $! > "$HANDOFF_WORKSPACE/monitor.pid"
 ```
 
 ## Stall and Resume Policy
@@ -345,7 +379,9 @@ If the runtime supports todos or checklists, load `references/bootstrap-checklis
 1. Activate
    - Confirm the user asked to run the harness, not merely discuss it.
    - Treat activation as delegation of an outcome, not literal minimum execution.
-   - Coordinator chooses delivery mode and creates `00-request.md` with a safe request summary, intent expansion, handoff workspace path, constraints digest, assumptions, autonomy budget, question policy, role permissions, stop conditions, and validation expectations.
+   - Coordinator chooses delivery mode and outcome class: proposal-only, first implementation slice, or full delivery.
+   - For codebase/product repair tasks, default to first implementation slice unless the user explicitly requested proposal-only.
+   - Coordinator creates `00-request.md` with a safe request summary, intent expansion, delivery mode, outcome class, handoff workspace path, constraints digest, assumptions, autonomy budget, question policy, role permissions, stop conditions, and validation expectations.
 
 2. Plan
    - Run the Planner pass.
@@ -359,13 +395,14 @@ If the runtime supports todos or checklists, load `references/bootstrap-checklis
    - Run the Generator pass.
    - Generator drafts the contract proposal.
    - Evaluator amends it with testable acceptance criteria and verification.
+   - If outcome class is first implementation slice or full delivery, the contract must include tangible product/code/document/data changes, not only a plan, unless a blocker is recorded.
    - Generator and Evaluator continue file handoffs until the contract is `AGREED`.
    - Coordinator finalizes or arbitrates only for deadlock, explicit limits, or user-level scope questions.
 
 5. Self-supervise
    - For long-job delivery, Coordinator writes `05-self-supervision.md` before implementation starts.
    - Record the exact checkpoint and final gate commands using `HARNESS_SKILL_DIR`.
-   - In shell-capable interactive runtimes, start `"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh"` from this same agent session, or record why it was skipped.
+   - In shell-capable interactive runtimes, start `"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh"` from this same agent session, health-check the PID/logs, or record why it was skipped or unavailable.
    - Treat a failed gate as a continue/repair signal, not permission to final.
 
 6. Generate
@@ -379,7 +416,10 @@ If the runtime supports todos or checklists, load `references/bootstrap-checklis
 8. Iterate or finish
    - If blocking issues remain, Coordinator sends the actionable findings back into a new contract cycle.
    - In long-job delivery, continue to the next milestone without asking the user unless the stop condition or question policy requires it.
-   - If the contract passes or remaining issues are intentionally deferred, Coordinator writes `50-final-summary.md`, runs or manually checks the final gate, and responds to the user only after the gate passes.
+   - Do not ask "should I implement this?" after a plan when the chosen outcome class permits the next safe slice; write the next contract and continue.
+   - If the contract passes or remaining issues are intentionally deferred, Coordinator writes `50-final-summary.md`, then runs or manually checks the final gate, and responds to the user only after the gate passes.
+   - Do not run the final-stage gate as a preflight before `50-final-summary.md`; use a checkpoint-stage gate for preflight checks.
+   - After the final gate passes, always send a user-facing final answer with what changed, how it was verified, and the next concrete step if more milestones remain.
    - Release completed role resources and clean up disposable handoff files when they are no longer needed. Preserve durable long-job checkpoints until resume evidence is no longer useful.
 
 ## Artifact Set
@@ -402,11 +442,11 @@ Use these artifacts when the environment supports files. Keep them short and tas
 
 Suggested schemas:
 
-- `00-request.md`: request summary, intent expansion, delivery mode, handoff workspace path, constraints digest, assumptions, autonomy budget, question policy, role permissions, stop conditions, validation expectations, untrusted data notes.
+- `00-request.md`: request summary, intent expansion, delivery mode, outcome class, handoff workspace path, constraints digest, assumptions, autonomy budget, question policy, role permissions, stop conditions, validation expectations, untrusted data notes.
 - `05-self-supervision.md`: required for long-job delivery before implementation; gate commands, monitor decision, idle/max duration, failure rule, log/prompt paths, resume instruction.
 - `10-product-spec.md`: outcome, target user, scope, non-goals, constraints, milestones, acceptance criteria, risks.
 - `20-evaluation-rubric.md`: scoring dimensions, weights, calibration examples, blocking criteria, likely failure modes, verification plan.
-- `25-iteration-contract.md`: cycle goal, deliverables, acceptance criteria, verification method, ownership, out-of-scope, stop condition, agreement status, negotiation log.
+- `25-iteration-contract.md`: cycle goal, deliverables, acceptance criteria, verification method, ownership, out-of-scope, stop condition, agreement status, negotiation log; for implementation outcome classes, include the tangible slice to change and verify.
 - `25-final-review-contract.md`: optional, only in Simplified Final Review Mode; full deliverables, final acceptance criteria, verification method, blocking failure modes, frozen rubric reference.
 - `30-generation-report.md`: output summary, changed files/artifacts, self-checks, validation output, known limitations.
 - `35-context-transition.md`: optional, only when context reset is needed; current goal, completed work, changed files/artifacts, active contract, failing checks, next steps, constraints.
@@ -464,7 +504,7 @@ You are the Planner role pass in a single-agent harness. Convert the user's requ
 Generator:
 
 ```text
-You are the Generator role pass in a single-agent harness. Your job is to create the actual output. Read the product spec, constraints digest, and either the active iteration contract or, in simplified final review mode, `25-final-review-contract.md` before building. Implement only the agreed scope. Run appropriate self-checks, but do not treat self-review as final evaluation. Output 30-generation-report.md-style Markdown with changed files/artifacts, key decisions, validation, and known limitations.
+You are the Generator role pass in a single-agent harness. Your job is to create the actual output. Read the product spec, constraints digest, outcome class, and either the active iteration contract or, in simplified final review mode, `25-final-review-contract.md` before building. If the outcome class is first implementation slice or full delivery, produce tangible product/code/document/data changes rather than stopping at a plan. Implement only the agreed scope. Run appropriate self-checks, but do not treat self-review as final evaluation. Output 30-generation-report.md-style Markdown with changed files/artifacts, key decisions, validation, and known limitations.
 ```
 
 Evaluator:

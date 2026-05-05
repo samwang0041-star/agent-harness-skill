@@ -142,14 +142,21 @@ extract_status() {
   local file="$1"
   local allowed="$2"
   awk -v allowed="$allowed" '
-    {
-      line = $0
+    function clean(raw) {
+      line = raw
       sub(/^[[:space:]#>*-]+/, "", line)
       sub(/[[:space:]]+$/, "", line)
+      gsub(/[`*_]/, "", line)
+      sub(/^[[:space:]]+/, "", line)
+      sub(/[[:space:]]+$/, "", line)
+      return line
+    }
+    {
+      line = clean($0)
       if (line ~ "^(" allowed ")$") {
         status = line
       }
-      if (line ~ "^(Decision|Result|Verdict|Status|Pass/Fail|Agreement Status|Contract Status):[[:space:]]*(" allowed ")$") {
+      if (line ~ "^(Decision|Result|Verdict|Status|Pass[[:space:]]*/[[:space:]]*Fail|Agreement Status|Contract Status):[[:space:]]*(" allowed ")$") {
         sub(/^.*:[[:space:]]*/, "", line)
         status = line
       }

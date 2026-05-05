@@ -16,6 +16,12 @@ These are minimal starter examples. Replace bracketed placeholders with task-spe
 ## Delivery Mode
 standard | long-job | simplified-final-review | review-only
 
+## Outcome Class
+proposal-only | first-implementation-slice | full-delivery
+
+## Why This Outcome Class
+[Why the harness is allowed to stop at a proposal, or why it should continue into implementation.]
+
 ## Handoff Workspace
 [Absolute path. Use a disposable temp directory for short work; use a durable directory for long-job delivery.]
 
@@ -96,6 +102,7 @@ standard | long-job | simplified-final-review | review-only
 - Command: `[exact "$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" command, if started]`
 - PID file: `[path]`
 - Logs: `[monitor-supervisor.log / monitor.log / monitor-gate-output.txt]`
+- Health check: `[alive | exited immediately | unavailable in this runtime]`
 - Idle timeout: `[seconds]`
 - Max duration: `[seconds]`
 
@@ -138,8 +145,12 @@ If a checkpoint gate fails, continue the harness cycle, write missing artifacts,
 ## Cycle Goal
 [One feature, user-visible workflow, or testable vertical slice.]
 
+## Outcome Class For This Cycle
+proposal-only | first-implementation-slice | full-delivery
+
 ## Deliverables
 - [Concrete output]
+- [For implementation outcome classes, include tangible product/code/document/data changes, not only a plan.]
 
 ## Acceptance Criteria
 - [Exact, testable condition]
@@ -158,7 +169,7 @@ If a checkpoint gate fails, continue the harness cycle, write missing artifacts,
 [Maximum iterations, pass criteria, time/budget limit, or escalation condition.]
 
 ## Agreement Status
-AGREED | COORDINATOR-ARBITRATED | BLOCKED
+Status: AGREED | COORDINATOR-ARBITRATED | BLOCKED
 
 ## Negotiation Log
 - Generator proposal: [summary]
@@ -256,7 +267,7 @@ Simplified Final Review Mode
 - [Claim, file list, validation result, known limitation, or omission checked after initial findings]
 
 ## Pass / Fail
-PASS | FAIL
+Decision: PASS | FAIL
 
 ## Residual Risks
 - [Accepted risk or deferred polish]

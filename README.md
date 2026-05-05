@@ -42,6 +42,8 @@ It is a single-agent system of role separation:
 - Evaluator independently verifies quality and catches failures.
 - Coordinator orchestrates handoffs, constraints, disputes, iteration, and final synthesis.
 
+For codebase and product repair tasks, the default outcome is a safe first implementation slice unless the user explicitly asks for proposal-only work. Plans are scaffolding; verified product changes are the deliverable.
+
 The method emphasizes:
 
 - restrained upstream planning

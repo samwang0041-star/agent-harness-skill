@@ -36,6 +36,8 @@ There is also one host role that is not counted as one of the three role passes:
 
 The point is not to make several agents all write answers. If every role is generating, you only have multiple writers. Agent Harness creates checks and balances: planning, generation, and evaluation stay separate.
 
+The point is also not to produce a beautiful plan and stop. For codebase and product repair tasks, the default outcome is a safe first implementation slice unless the user explicitly asks for proposal-only work. Plans are scaffolding; verified product changes are the deliverable.
+
 ## Design Principles
 
 ### 1. Upstream Planning Should Be Restrained
