@@ -101,10 +101,12 @@ Generator 可以反驳，说明某些要求超出范围或应该延期。
 我倾向于让每个角色写文件：
 
 - `10-product-spec.md`
+- `05-self-supervision.md`（长作业）
 - `20-evaluation-rubric.md`
 - `25-iteration-contract.md`
 - `30-generation-report.md`
 - `40-evaluation-report.md`
+- `45-checkpoint.md`（长作业）
 - `50-final-summary.md`
 
 这样角色不会混成一团，后续 Agent 也不必继承整个长聊天。每一步都留下证据，可以复盘。当上下文变长、模型开始混乱时，也可以通过交接文档重启一个新 Generator。

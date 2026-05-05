@@ -104,6 +104,7 @@ Recommended artifacts:
 
 ```text
 00-request.md
+05-self-supervision.md
 10-product-spec.md
 20-evaluation-rubric.md
 25-iteration-contract.md
@@ -111,10 +112,17 @@ Recommended artifacts:
 30-generation-report.md
 35-context-transition.md
 40-evaluation-report.md
+45-checkpoint.md
 50-final-summary.md
 ```
 
 Files are a better coordination substrate than one long shared transcript: they are concise, traceable, reviewable, and less likely to pollute each role's context.
+
+The lightweight hard gate lives at `skills/agent-harness/scripts/harness-gate.sh`. In shell-capable runtimes, long jobs should run the gate at each checkpoint and before the final response. If required artifacts such as `05-self-supervision.md`, `30-generation-report.md`, `40-evaluation-report.md`, `45-checkpoint.md`, or `50-final-summary.md` are missing, the task is not allowed to be summarized as done. In product-delivery modes, final delivery also requires a `PASS` evaluation and a non-`BLOCKED` contract.
+
+Longer unattended work is supervised by the activated agent itself using `skills/agent-harness/scripts/harness-runner.sh` or `harness-monitor.sh`. This is not a second assistant watching from the side; it is the active Coordinator starting the smallest self-supervision loop: check the gate, write a continuation prompt, call the configured agent CLI or generate a resume prompt, then check the gate again. If the model stops at `end_turn`, the workspace still contains the missing-work report and continuation entry point.
+
+Inside Claude Code, the Claude Code session should start `skills/agent-harness/scripts/harness-monitor.sh` itself. It does not take over Claude's interactive process; it watches the same handoff workspace. If the gate passes, it succeeds. If Claude stops, the workspace goes idle, and the gate still fails, it writes `runner-next-prompt.md` as the precise continuation entry point.
 
 ### 7. Context Reset Means a Fresh Instance, Not Just Compression
 

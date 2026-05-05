@@ -112,10 +112,12 @@ This avoids a common failure mode: discovering after the work is done that every
 I prefer each role to write small files:
 
 - `10-product-spec.md`
+- `05-self-supervision.md` for long jobs
 - `20-evaluation-rubric.md`
 - `25-iteration-contract.md`
 - `30-generation-report.md`
 - `40-evaluation-report.md`
+- `45-checkpoint.md` for long jobs
 - `50-final-summary.md`
 
 Files keep the roles isolated. They preserve evidence. They make failures easier to diagnose. They also support context reset: when a long-running Generator loses coherence, a fresh Generator can resume from a structured handoff instead of inheriting a messy chat transcript.

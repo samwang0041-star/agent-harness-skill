@@ -104,6 +104,7 @@ Planner 的规格故意保持高层，因此 Generator 和 Evaluator 需要在�
 
 ```text
 00-request.md
+05-self-supervision.md
 10-product-spec.md
 20-evaluation-rubric.md
 25-iteration-contract.md
@@ -111,10 +112,17 @@ Planner 的规格故意保持高层，因此 Generator 和 Evaluator 需要在�
 30-generation-report.md
 35-context-transition.md
 40-evaluation-report.md
+45-checkpoint.md
 50-final-summary.md
 ```
 
 文件比长对话更适合作为 agent 间通信层：更简洁、可追溯、可复盘，也更不容易污染各自上下文。
+
+新增的轻量硬门禁在 `skills/agent-harness/scripts/harness-gate.sh`。在能运行 shell 的环境里，长作业每轮 checkpoint 和最终回复前都要跑 gate；如果缺少 `05-self-supervision.md`、`30-generation-report.md`、`40-evaluation-report.md`、`45-checkpoint.md` 或 `50-final-summary.md` 等必需 artifact，就不能把任务总结成“已完成”。在产品交付模式下，最终交付还必须是 `PASS` 评估，并且合同不能是 `BLOCKED`。
+
+更长时间的无人值守工作由被启动的 agent 自己使用 `skills/agent-harness/scripts/harness-runner.sh` 或 `harness-monitor.sh`。它不是让另一个助手在旁边监工，而是让当前 Coordinator 自己启动最小自监督循环：检查 gate、写续跑 prompt、调用你配置的 agent CLI 或生成恢复提示、再检查 gate。这样模型停在 `end_turn` 时，workspace 里仍然有明确的缺口和续跑入口。
+
+在 Claude Code 里，更合适的是让 Claude Code 会话自己启动 `skills/agent-harness/scripts/harness-monitor.sh`。它不接管 Claude 的交互进程，只监控同一个 handoff workspace：gate 通过就成功；Claude 停了、workspace 不再变化、gate 还没过，就生成 `runner-next-prompt.md`，让下一轮续跑有明确入口。
 
 ### 7. 上下文重置不是压缩，而是换新实例
 

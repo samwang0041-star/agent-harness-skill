@@ -1,6 +1,10 @@
 ---
 name: agent-harness
-description: 当用户明确要求运行 agent-harness、harness engineering、长时间作业、高级交付、单 agent harness、Planner-Generator-Evaluator、规划器/生成器/评估器，要求唤醒 harness 处理具体需求，或明确要求质检/改进 agent-harness skill 自身时使用。显式启动意味着委托交付结果，而不是让 Codex 机械执行字面最小动作。本文件是中文阅读版；可安装版本以 SKILL.md 为准。
+description: >-
+  当用户明确要求运行 agent-harness、harness engineering、长时间作业、高级交付、单
+  agent harness、Planner-Generator-Evaluator、规划器/生成器/评估器，要求唤醒 harness
+  处理具体需求，或明确要求质检/改进 agent-harness skill 自身时使用。显式启动意味着委托交付结果，而不是让
+  Codex 机械执行字面最小动作。本文件是中文阅读版；可安装版本以 SKILL.md 为准。
 ---
 
 # Agent Harness 中文阅读版
@@ -42,6 +46,8 @@ Coordinator 需要负责把短 prompt 转成可交付目标：
 - Evaluator 必须严格，并在任务允许时主动检查、运行、点击、复现、验证。
 - 优先自主推进，而不是频繁提问。只有阻断安全或有效推进的问题才问用户。
 - 对明确的长作业/高级交付请求，优先完整、验证过的结果，而不是短响应延迟。
+- 把 artifact gate 当成硬流程边界。最终回复用户前，必须确认必需交接文件存在、非空，并且 final gate 通过或已手动检查。
+- 在当前 agent 会话内自监督。当前 Coordinator 负责启动、检查并服从 gate/runner/monitor 协议；不能依赖第二个助手或用户来发现 harness 提前停了。
 - 每个 harness 组件都代表一个假设。未来模型更强时，可以一次移除或简化一个组件，并比较结果。
 
 ## 四个角色
@@ -135,9 +141,109 @@ Evaluator 不能接受 Generator 自评作为证据，不能让 Generator 报告
 - 构建前明确 stop condition。
 - 每个合同周期结束后的 checkpoint 式进展记录。
 - 每个完成 milestone 的验证证据。
+- 每个周期结束后通过 checkpoint gate；最终回复用户前通过 final gate。
 - 当 Generator 失去连贯性、重复失败或接近运行时上下文极限时，使用 context transition。
 
 milestone 之间默认继续推进；只有阻断性歧义、风险、权限问题或停止条件触发时才询问用户。
+
+## 硬门禁与轻量 Runner
+
+这个 skill 本质是协议，但长时间工作需要一个很小的硬门禁，防止模型“代码做完就直接 final”。当运行环境能执行 shell 时，使用本 skill 目录里的 `scripts/harness-gate.sh` 作为轻量 gate。
+
+使用任何脚本前，先解析包含本 `SKILL.md` 的绝对 skill 目录，并记录为 `HARNESS_SKILL_DIR`。不要假设当前项目目录里存在 `scripts/`。
+
+checkpoint gate：
+
+```bash
+"$HARNESS_SKILL_DIR/scripts/harness-gate.sh" --workspace "$HANDOFF_WORKSPACE" --mode long-job --stage checkpoint
+```
+
+final gate：
+
+```bash
+"$HARNESS_SKILL_DIR/scripts/harness-gate.sh" --workspace "$HANDOFF_WORKSPACE" --mode long-job --stage final
+```
+
+根据实际模式选择 `--mode standard`、`--mode long-job`、`--mode simplified-final-review` 或 `--mode review-only`。
+
+gate 失败不是小瑕疵，而是流程失败。gate 不通过时不能最终回复用户；应补齐缺失 artifact、补做验证、把合同标记为 `BLOCKED`、写入 `45-checkpoint.md`，或询问用户最小必要问题。
+
+如果运行时不能执行 shell，则手动执行同样检查：
+
+- 标准最终交付：`00-request.md`、`10-product-spec.md`、`20-evaluation-rubric.md`、`25-iteration-contract.md`、`30-generation-report.md`、`40-evaluation-report.md`、`50-final-summary.md`
+- 长作业 checkpoint：`00-request.md`、`05-self-supervision.md`、标准 artifact 到 `40-evaluation-report.md`，再加 `45-checkpoint.md`
+- 长作业最终交付：长作业 checkpoint artifact，再加 `50-final-summary.md`
+- 简化最终评审：`00-request.md`、`10-product-spec.md`、`20-evaluation-rubric.md`、`25-final-review-contract.md`、`30-generation-report.md`、`40-evaluation-report.md`、`50-final-summary.md`
+- 只评审最终交付：`00-request.md`、`10-product-spec.md`、`20-evaluation-rubric.md`、`40-evaluation-report.md`、`50-final-summary.md`
+
+`40-evaluation-report.md` 必须有明确的 `PASS` 或 `FAIL`。只有自信叙述、没有 pass/fail 决策，不能通过 gate。
+对于产品交付模式（`standard`、`long-job`、`simplified-final-review`），final gate 必须要求 `PASS`，并且当前合同不能是 `BLOCKED`。`FAIL` 评估或 `BLOCKED` 合同可以作为 checkpoint 证据，但不是合法最终交付状态。
+
+## 自监督协议
+
+这个 skill 被启动后，当前 agent 必须自己监督自己。`harness-gate.sh`、`harness-runner.sh` 和 `harness-monitor.sh` 是当前 Coordinator 自己要使用的工具，不是要求另一个助手在旁边帮它盯。
+
+每个长作业 run 都必须在开始实现前，在 handoff workspace 里创建 `05-self-supervision.md`。它必须包含：
+
+- checkpoint 和 final 阶段的确切 `harness-gate.sh` 命令。
+- 当前会话是否启动了 `harness-monitor.sh`，如果没启动，原因是什么。
+- idle timeout 和最大运行时长。
+- 硬规则：gate 失败时继续 harness cycle，不能最终回复用户。
+- `runner-next-prompt.md`、monitor log、gate output 的位置。
+- 如果运行时仍然停住，最小安全恢复指令是什么。
+
+在 Claude Code 或任何能执行 shell 的交互式运行时中，当前 agent 应在 `00-request.md`、`10-product-spec.md`、`20-evaluation-rubric.md` 和当前合同存在后，自己启动 monitor：
+
+```bash
+"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
+  --workspace "$HANDOFF_WORKSPACE" \
+  --mode long-job \
+  --stage final \
+  --interval 30 \
+  --idle-timeout 600 \
+  --cwd "$PROJECT_ROOT" \
+  --request-file "$HANDOFF_WORKSPACE/00-request.md" \
+  > "$HANDOFF_WORKSPACE/monitor-supervisor.log" 2>&1 &
+echo $! > "$HANDOFF_WORKSPACE/monitor.pid"
+```
+
+monitor 不能替代当前 agent 自己跑检查。当前 agent 仍然必须在每个周期结束后跑 checkpoint gate，并在最终回复用户前跑 final gate。
+
+如果当前 agent 到达看似可以结束的位置，但 final gate 失败，它不能 final。它必须选择以下动作之一：
+
+- 补写缺失 artifact 并重新跑 gate。
+- 补做验证并更新 `40-evaluation-report.md`。
+- 写入或刷新 `45-checkpoint.md`。
+- 缩小下一轮合同并继续。
+- 把合同标记为 `BLOCKED`，只问用户最小必要问题。
+
+对于更长时间的无人值守任务，使用 `"$HARNESS_SKILL_DIR/scripts/harness-runner.sh"` 作为最小外部循环。runner 会检查 gate，写入 `runner-next-prompt.md`，明确下一轮缺什么；如果传入 `--agent-cmd`，它会调用指定 agent CLI 继续跑，并循环直到 gate 通过或达到最大轮数。
+
+示例：
+
+```bash
+"$HARNESS_SKILL_DIR/scripts/harness-runner.sh" \
+  --workspace "$HANDOFF_WORKSPACE" \
+  --mode long-job \
+  --stage final \
+  --agent-cmd 'codex exec --cd "$HARNESS_CWD" "$(cat "$HARNESS_PROMPT")"' \
+  --max-cycles 12
+```
+
+runner 故意保持 provider-neutral，不绑定 Codex、Claude 或 Kimi。`--agent-cmd` 可以适配当前可用 CLI。命令会收到这些环境变量：`HARNESS_WORKSPACE`、`HARNESS_MODE`、`HARNESS_STAGE`、`HARNESS_PROMPT`、`HARNESS_CWD`、`HARNESS_GATE_OUTPUT`。
+
+对于 Claude Code 这类交互式 agent，会话自己应启动 `"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh"` 作为 watchdog。monitor 会盯住 handoff workspace，重复运行 gate；gate 通过就成功退出，workspace 长时间不再变化但 gate 仍失败时，就写入 `runner-next-prompt.md`，明确告诉下一轮应该补什么。
+
+示例：
+
+```bash
+"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
+  --workspace "$HANDOFF_WORKSPACE" \
+  --mode long-job \
+  --stage final \
+  --interval 30 \
+  --idle-timeout 600
+```
 
 ## Stall and Resume Policy / 卡住与恢复策略
 
@@ -172,6 +278,7 @@ milestone 之间默认继续推进；只有阻断性歧义、风险、权限问�
 
 ```text
 00-request.md
+05-self-supervision.md（长作业必需）
 10-product-spec.md
 20-evaluation-rubric.md
 25-iteration-contract.md
@@ -186,6 +293,14 @@ milestone 之间默认继续推进；只有阻断性歧义、风险、权限问�
 具体 artifact 模板见 `references/artifact-templates.md`。Coordinator 起步清单见 `references/bootstrap-checklist.md`。
 
 `00-request.md` 应记录 intent expansion、delivery mode、handoff workspace path、autonomy budget、question policy 和 stop conditions。`10-product-spec.md` 在长作业中应记录 milestones / vertical slices。长作业的 `45-checkpoint.md` 应保留到最终交付不再需要恢复证据，或用户明确要求删除为止。
+
+长作业必须在实现开始前写 `05-self-supervision.md`，记录 gate 命令、monitor 决策、idle/max duration、失败规则、日志/续跑提示位置和恢复指令。
+
+如果运行时能执行 shell，最终交付前用 `"$HARNESS_SKILL_DIR/scripts/harness-gate.sh"` 验证这些 artifact。这个 gate 有意保持很小：只检查必需文件是否存在、非空，以及是否包含继续/审计需要的最小状态标记。
+
+如果运行时能执行 shell 且有可用 agent CLI，当前 agent 可以用 `"$HARNESS_SKILL_DIR/scripts/harness-runner.sh"`。它是这套 skill 的最小状态机：检查、生成续跑提示、继续、过 gate、循环。
+
+如果任务在 Claude Code 里运行，当前 Claude Code 会话应自己启动 `"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh"`：监控、过 gate、识别 idle stop、生成续跑提示。
 
 ## Rubric 默认维度
 

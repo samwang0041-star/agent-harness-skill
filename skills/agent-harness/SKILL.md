@@ -1,6 +1,19 @@
 ---
 name: agent-harness
-description: Use when the user explicitly asks to run, activate, use, or delegate through agent-harness, harness engineering, long-job/high-quality delivery mode, single-agent harness, 长时间作业, 高级交付, planner-generator-evaluator, 规划器/生成器/评估器, or asks to wake/summon the harness to handle a concrete request. Also use when the user explicitly asks to QA, test, or improve the agent-harness skill itself. Explicit activation means delegation: Codex should take responsibility for clarifying intent, planning, decomposing, implementing, verifying, iterating, and delivering a high-quality result rather than mechanically following the literal minimum request. Do not trigger merely for casual meta-discussion, explanation, deletion, or installation unless the user also asks to run, QA, or improve the harness. This is a platform-neutral single-agent harness pattern usable by any assistant runtime that can run isolated role passes, files, and tools.
+description: >-
+  Use when the user explicitly asks to run, activate, use, or delegate through
+  agent-harness, harness engineering, long-job/high-quality delivery mode,
+  single-agent harness, 长时间作业, 高级交付, planner-generator-evaluator,
+  规划器/生成器/评估器, or asks to wake/summon the harness to handle a concrete
+  request. Also use when the user explicitly asks to QA, test, or improve the
+  agent-harness skill itself. Explicit activation means delegation: Codex should
+  take responsibility for clarifying intent, planning, decomposing,
+  implementing, verifying, iterating, and delivering a high-quality result
+  rather than mechanically following the literal minimum request. Do not trigger
+  merely for casual meta-discussion, explanation, deletion, or installation
+  unless the user also asks to run, QA, or improve the harness. This is a
+  platform-neutral single-agent harness pattern usable by any assistant runtime
+  that can run isolated role passes, files, and tools.
 ---
 
 # Agent Harness
@@ -42,6 +55,8 @@ Activation does not authorize unbounded scope creep. It authorizes thoughtful ow
 - Make the Evaluator strict. It must actively inspect, run, click, test, reproduce, or otherwise verify when the task allows it.
 - Prefer autonomous progress over frequent questions. Ask only when ambiguity blocks safe or meaningful progress.
 - For explicit long-job or high-quality delivery requests, optimize for finished, verified output over short response latency.
+- Treat artifact gates as hard workflow boundaries. Do not send a user-facing final response until the required handoff artifacts exist, are non-empty, and the final gate passes or has been manually checked.
+- Self-supervise inside the active agent session. The active Coordinator is responsible for starting, checking, and obeying the gate/runner/monitor protocol; do not rely on a second assistant or the user to notice that the harness stopped early.
 - Treat every harness component as removable. If a future model/runtime no longer needs a component, simplify one variable at a time and compare outcomes.
 
 ## Coordinator Duties
@@ -63,6 +78,8 @@ The Coordinator must:
 - Prevent write conflicts. Default to one writer for product files: Generator writes; Evaluator is read-only unless explicitly assigned a patch.
 - Release completed sessions, scratch state, or other runtime resources after their outputs are captured.
 - Clean up disposable handoff workspaces unless the user wants to inspect the artifacts. Preserve durable long-job workspaces until final delivery no longer needs resume evidence, or until the user asks to delete them.
+- Before any user-facing final response, run the artifact gate when shell execution is available, or manually check the same required artifact list when it is not.
+- In long-job delivery, create a self-supervision record in the handoff workspace before build work starts. Record the gate command, optional monitor command, stop condition, and what to do if the gate fails.
 - Decide when to stop, iterate, ask the user, or accept a known residual risk.
 
 ## Role 1: Planner
@@ -184,9 +201,109 @@ Long-job delivery requires:
 - a stop condition before build work starts
 - checkpoint-style progress at the end of each contract cycle
 - verification evidence for every completed milestone
+- a passing checkpoint gate before continuing after each cycle, and a passing final gate before the user-facing final response
 - context transition if the Generator loses coherence, repeats failures, or the runtime is near its practical context limit
 
 Do not wait for the user between milestones unless a blocking ambiguity, risk, permission issue, or stop condition requires it.
+
+## Hard Gates and Lightweight Runner
+
+The skill is a protocol, but long-running work needs a small hard stop to prevent premature final answers. When the runtime can run shell commands, use `scripts/harness-gate.sh` from this skill directory as the lightweight runner gate.
+
+Before using any script, resolve the absolute skill directory that contains this `SKILL.md` and store it in `HARNESS_SKILL_DIR`. Do not assume the current project directory contains `scripts/`.
+
+Checkpoint gate:
+
+```bash
+"$HARNESS_SKILL_DIR/scripts/harness-gate.sh" --workspace "$HANDOFF_WORKSPACE" --mode long-job --stage checkpoint
+```
+
+Final gate:
+
+```bash
+"$HARNESS_SKILL_DIR/scripts/harness-gate.sh" --workspace "$HANDOFF_WORKSPACE" --mode long-job --stage final
+```
+
+Use the matching `--mode` for `standard`, `long-job`, `simplified-final-review`, or `review-only`.
+
+Gate failure is a workflow failure, not polish. If the gate fails, do not final. Instead, write the missing artifact, perform the missing verification, mark the contract `BLOCKED`, write `45-checkpoint.md`, or ask the smallest necessary user question.
+
+If shell execution is unavailable, manually enforce the same gate:
+
+- standard final: `00-request.md`, `10-product-spec.md`, `20-evaluation-rubric.md`, `25-iteration-contract.md`, `30-generation-report.md`, `40-evaluation-report.md`, `50-final-summary.md`
+- long-job checkpoint: `00-request.md`, `05-self-supervision.md`, standard artifacts through `40-evaluation-report.md`, plus `45-checkpoint.md`
+- long-job final: long-job checkpoint artifacts plus `50-final-summary.md`
+- simplified final review: `00-request.md`, `10-product-spec.md`, `20-evaluation-rubric.md`, `25-final-review-contract.md`, `30-generation-report.md`, `40-evaluation-report.md`, `50-final-summary.md`
+- review-only final: `00-request.md`, `10-product-spec.md`, `20-evaluation-rubric.md`, `40-evaluation-report.md`, `50-final-summary.md`
+
+The `40-evaluation-report.md` must include an explicit `PASS` or `FAIL`. A confident narrative without a pass/fail decision does not pass the gate.
+For product-delivery modes (`standard`, `long-job`, and `simplified-final-review`), the final gate requires `PASS` and the active contract must not be `BLOCKED`. A `FAIL` evaluation or `BLOCKED` contract is valid checkpoint evidence, but it is not a valid final delivery state.
+
+## Self-Supervision Protocol
+
+When this skill is activated, the active agent must supervise itself. `harness-gate.sh`, `harness-runner.sh`, and `harness-monitor.sh` are tools for the active Coordinator to use, not a requirement that another assistant watch from outside.
+
+For every long-job run, the active Coordinator must create `05-self-supervision.md` in the handoff workspace before implementation starts. It must include:
+
+- the exact `harness-gate.sh` command for checkpoint and final stages
+- whether `harness-monitor.sh` was started by this same agent session, or why it was skipped
+- the idle timeout and maximum duration
+- the rule: if the gate fails, continue the harness cycle instead of replying final
+- where `runner-next-prompt.md`, monitor logs, and gate output will be written
+- the smallest safe resume instruction if the runtime stops anyway
+
+In Claude Code or any shell-capable interactive runtime, the active agent should start its own monitor after `00-request.md`, `10-product-spec.md`, `20-evaluation-rubric.md`, and the active contract exist:
+
+```bash
+"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
+  --workspace "$HANDOFF_WORKSPACE" \
+  --mode long-job \
+  --stage final \
+  --interval 30 \
+  --idle-timeout 600 \
+  --cwd "$PROJECT_ROOT" \
+  --request-file "$HANDOFF_WORKSPACE/00-request.md" \
+  > "$HANDOFF_WORKSPACE/monitor-supervisor.log" 2>&1 &
+echo $! > "$HANDOFF_WORKSPACE/monitor.pid"
+```
+
+The monitor is not a substitute for the active agent's own checks. The active agent still must run the checkpoint gate after each cycle and the final gate before replying to the user.
+
+If the active agent reaches an apparent stopping point and the final gate fails, it must not final. It must do one of these instead:
+
+- write the missing artifact and rerun the gate
+- perform the missing verification and update `40-evaluation-report.md`
+- write or refresh `45-checkpoint.md`
+- narrow the next contract and continue
+- mark the contract `BLOCKED` and ask the smallest necessary user question
+
+For longer unattended runs, the active agent may use `"$HARNESS_SKILL_DIR/scripts/harness-runner.sh"` as the minimal loop. The runner checks the gate, writes `runner-next-prompt.md` with the exact missing work, optionally calls a configured agent CLI through `--agent-cmd`, and repeats until the gate passes or the maximum cycle count is reached.
+
+Example:
+
+```bash
+"$HARNESS_SKILL_DIR/scripts/harness-runner.sh" \
+  --workspace "$HANDOFF_WORKSPACE" \
+  --mode long-job \
+  --stage final \
+  --agent-cmd 'codex exec --cd "$HARNESS_CWD" "$(cat "$HARNESS_PROMPT")"' \
+  --max-cycles 12
+```
+
+The runner is intentionally provider-neutral. Adapt `--agent-cmd` to the available CLI. The command receives `HARNESS_WORKSPACE`, `HARNESS_MODE`, `HARNESS_STAGE`, `HARNESS_PROMPT`, `HARNESS_CWD`, and `HARNESS_GATE_OUTPUT`.
+
+For Claude Code or any interactive agent session, use `"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh"` as a self-started watchdog. The monitor watches the handoff workspace, repeatedly runs the gate, exits successfully when the gate passes, and writes `runner-next-prompt.md` when the workspace becomes idle while the gate still fails.
+
+Example:
+
+```bash
+"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" \
+  --workspace "$HANDOFF_WORKSPACE" \
+  --mode long-job \
+  --stage final \
+  --interval 30 \
+  --idle-timeout 600
+```
 
 ## Stall and Resume Policy
 
@@ -245,18 +362,24 @@ If the runtime supports todos or checklists, load `references/bootstrap-checklis
    - Generator and Evaluator continue file handoffs until the contract is `AGREED`.
    - Coordinator finalizes or arbitrates only for deadlock, explicit limits, or user-level scope questions.
 
-5. Generate
+5. Self-supervise
+   - For long-job delivery, Coordinator writes `05-self-supervision.md` before implementation starts.
+   - Record the exact checkpoint and final gate commands using `HARNESS_SKILL_DIR`.
+   - In shell-capable interactive runtimes, start `"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh"` from this same agent session, or record why it was skipped.
+   - Treat a failed gate as a continue/repair signal, not permission to final.
+
+6. Generate
    - Generator builds the agreed scope.
    - Generator self-checks and writes `30-generation-report.md`.
 
-6. Evaluate
+7. Evaluate
    - Evaluator independently verifies the result from direct evidence first, then reads `30-generation-report.md` only for cross-checking.
    - Evaluator writes `40-evaluation-report.md` with findings first and pass/fail.
 
-7. Iterate or finish
+8. Iterate or finish
    - If blocking issues remain, Coordinator sends the actionable findings back into a new contract cycle.
    - In long-job delivery, continue to the next milestone without asking the user unless the stop condition or question policy requires it.
-   - If the contract passes or remaining issues are intentionally deferred, Coordinator writes `50-final-summary.md` and responds to the user.
+   - If the contract passes or remaining issues are intentionally deferred, Coordinator writes `50-final-summary.md`, runs or manually checks the final gate, and responds to the user only after the gate passes.
    - Release completed role resources and clean up disposable handoff files when they are no longer needed. Preserve durable long-job checkpoints until resume evidence is no longer useful.
 
 ## Artifact Set
@@ -265,6 +388,7 @@ Use these artifacts when the environment supports files. Keep them short and tas
 
 ```text
 00-request.md
+05-self-supervision.md (long-job only)
 10-product-spec.md
 20-evaluation-rubric.md
 25-iteration-contract.md
@@ -279,6 +403,7 @@ Use these artifacts when the environment supports files. Keep them short and tas
 Suggested schemas:
 
 - `00-request.md`: request summary, intent expansion, delivery mode, handoff workspace path, constraints digest, assumptions, autonomy budget, question policy, role permissions, stop conditions, validation expectations, untrusted data notes.
+- `05-self-supervision.md`: required for long-job delivery before implementation; gate commands, monitor decision, idle/max duration, failure rule, log/prompt paths, resume instruction.
 - `10-product-spec.md`: outcome, target user, scope, non-goals, constraints, milestones, acceptance criteria, risks.
 - `20-evaluation-rubric.md`: scoring dimensions, weights, calibration examples, blocking criteria, likely failure modes, verification plan.
 - `25-iteration-contract.md`: cycle goal, deliverables, acceptance criteria, verification method, ownership, out-of-scope, stop condition, agreement status, negotiation log.
@@ -290,6 +415,12 @@ Suggested schemas:
 - `50-final-summary.md`: final user-facing outcome, validation, unresolved risks, recommended next step.
 
 For concrete starter examples of all artifacts, load `references/artifact-templates.md`. Keep generated artifacts short and task-specific; do not copy the examples mechanically when task context requires different fields.
+
+When shell execution is available, validate these artifacts with `"$HARNESS_SKILL_DIR/scripts/harness-gate.sh"` before final delivery. The gate is deliberately small: it checks that required files exist, are non-empty, and include the minimum status markers needed for continuation or audit.
+
+When shell execution and an agent CLI are available, the active agent may use `"$HARNESS_SKILL_DIR/scripts/harness-runner.sh"` for long-job delivery. It is the smallest state machine for this skill: check, prompt, continue, gate, repeat.
+
+When the work is running inside Claude Code, the active Claude Code session should start `"$HARNESS_SKILL_DIR/scripts/harness-monitor.sh"` itself: watch, gate, detect idle stop, generate continuation prompt.
 
 ## Rubric Defaults
 

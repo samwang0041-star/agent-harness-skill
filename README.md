@@ -20,6 +20,9 @@ Core thesis:
 - `skills/agent-harness/SKILL.zh-CN.md`: Chinese reading version.
 - `skills/agent-harness/references/bootstrap-checklist.md`: coordinator startup checklist.
 - `skills/agent-harness/references/artifact-templates.md`: starter templates for the handoff artifacts.
+- `skills/agent-harness/scripts/harness-gate.sh`: lightweight artifact gate for checkpoint/final validation.
+- `skills/agent-harness/scripts/harness-runner.sh`: minimal external loop that checks the gate, writes continuation prompts, and can call a configured agent CLI.
+- `skills/agent-harness/scripts/harness-monitor.sh`: self-started watchdog for the active Claude Code/Codex session; it writes a continuation prompt when the workspace goes idle before the gate passes.
 - `README.zh-CN.md`: full Chinese explanation.
 - `README.en.md`: full English explanation.
 - `docs/ARTICLE.zh-CN.md`: Chinese public article draft.

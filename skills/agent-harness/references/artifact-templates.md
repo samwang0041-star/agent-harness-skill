@@ -81,6 +81,31 @@ standard | long-job | simplified-final-review | review-only
 - [Likely ambiguity, failure mode, or dependency]
 ```
 
+## 05-self-supervision.md
+
+```markdown
+# Self-Supervision Plan
+
+## Gate Commands
+- Skill directory: `[absolute HARNESS_SKILL_DIR]`
+- Checkpoint: `[exact "$HARNESS_SKILL_DIR/scripts/harness-gate.sh" command]`
+- Final: `[exact "$HARNESS_SKILL_DIR/scripts/harness-gate.sh" command]`
+
+## Monitor
+- Status: started | skipped
+- Command: `[exact "$HARNESS_SKILL_DIR/scripts/harness-monitor.sh" command, if started]`
+- PID file: `[path]`
+- Logs: `[monitor-supervisor.log / monitor.log / monitor-gate-output.txt]`
+- Idle timeout: `[seconds]`
+- Max duration: `[seconds]`
+
+## Failure Rule
+If a checkpoint gate fails, continue the harness cycle, write missing artifacts, narrow the contract, or mark `BLOCKED` and ask the smallest necessary question. If the final gate fails, do not final.
+
+## Resume Instruction
+[Smallest prompt or command needed if the runtime still stops.]
+```
+
 ## 20-evaluation-rubric.md
 
 ```markdown
